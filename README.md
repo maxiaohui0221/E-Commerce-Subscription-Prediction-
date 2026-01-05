@@ -62,4 +62,4 @@ $$logit(Y) = \beta_0 + \beta_1(Age) + \beta_2(Income) + \beta_3(CartSize) + \bet
 * **Libraries:** `stats` (glm), `car` (vif), `ggplot2` (visualization)
 
 ---
-*For more details, please refer to the full [Project Report](final_report.pdf).*
+*For more details, please refer to the full [Project Report](Final_Report.pdf).*
