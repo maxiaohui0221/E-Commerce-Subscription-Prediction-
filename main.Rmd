@@ -1,0 +1,666 @@
+---
+title: "STAT171_RCode"
+author: "Aastha Amin"
+date: "2025-03-20"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+```{r}
+#Libraries and Data
+library(tidyverse)
+library(gridExtra)
+library(corrplot)
+library(aod)
+data <- read.csv("E_commerce_subscription.csv")
+```
+
+# EDA
+## Count Data & Predictors vs Outcome Plots
+```{r}
+# View a few rows of the data
+head(data)
+```
+
+```{r}
+# Get an idea on the range of values
+summary(data)
+```
+
+```{r}
+# View the variable types of the data
+str(data)
+```
+
+```{r}
+# Check for missing values
+colSums(is.na(data))
+```
+
+```{r}
+# Created histograms for the numerical variables to analyze the counts and view the spread of the data
+p1 <- ggplot(data, aes(x=Age)) +
+  geom_histogram(fill="lightblue",color="black",bins=20) +
+  labs(title="Distribution of Age", x="Age", y="Count") +
+  theme_minimal()
+p2 <- ggplot(data, aes(x=Income_Level)) +
+  geom_histogram(fill="lightblue",color="black",bins=20) +
+  labs(title="Distribution of Income Level", x="Income Level", y="Count") +
+  theme_minimal()
+p3 <- ggplot(data, aes(x=Avg_Cart_Size)) +
+  geom_histogram(fill="lightblue",color="black",bins=20) +
+  labs(title="Distribution of Average Cart Size", x="Average Cart Size", y="Count") +
+  theme_minimal()
+p4 <- ggplot(data, aes(x=Website_Visit_Frequency)) +
+  geom_histogram(fill="lightblue",color="black",bins=20) +
+  labs(title="Distribution of Website Visit", x="Website Visit", y="Count") +
+  theme_minimal()
+p5 <- ggplot(data, aes(x=Marketing_Emails_Opened)) +
+  geom_histogram(fill="lightblue",color="black",bins=20) +
+  labs(title="Distribution of Marketing Emails Opened", x="Marketing Emails Opened", y="Count") +
+  theme_minimal()
+
+grid.arrange(p1, p2, p3, p4, p5)
+```
+There isn't any obvious skewness in the counts of the numerical variables.
+
+```{r}
+# Created bar plots for the categorical variables to analyze the counts and view the spread of the data
+p6 <- ggplot(data, aes(x=Device_Type)) +
+  geom_bar(fill="lightblue",color="black") +
+  labs(title="Distribution of Device Type", x="Device Type", y="Count") +
+  theme_minimal()
+p7 <- ggplot(data, aes(x=Loyalty_Program_Member)) +
+  geom_bar(fill="lightblue",color="black") +
+  labs(title="Distribution of Loyalty Program Member", x="Loyalty Program Member", y="Count") +
+  theme_minimal()
+
+grid.arrange(p6, p7)
+```
+Most devices are desktops or mobiles. About half of the people in the dataset are members.
+
+```{r}
+# Correlation matrix to view any potential multicolinearity
+num_vars <- data %>% select(Age, Income_Level, Avg_Cart_Size, Website_Visit_Frequency, Marketing_Emails_Opened)
+cor_matrix <- cor(num_vars)
+
+corrplot(cor_matrix, method="color", tl.col="black")
+```
+There isn't any significant correlation between the numerical variables.
+
+```{r}
+data$Loyalty_Program_Member = factor(data$Loyalty_Program_Member, levels = c(0,1), labels = c("No", "Yes"))
+data$Subscribed_Premium = factor(data$Subscribed_Premium, levels = c(0,1), labels = c("No", "Yes"))
+
+# View distribution of income levels by device types
+qplot(Age, data=data, geom="density", fill=Device_Type, alpha=I(.5),
+   main="Distribution of Income Level", xlab="Device Type",
+   ylab="Density")
+
+# Compares income level by loyalty program member and premium subscriber
+a <- ggplot(data, aes(x = Income_Level))
+a + geom_area(aes(fill = Loyalty_Program_Member), stat ="bin", alpha=0.6) +
+  theme_classic()
+a +geom_area(aes(fill = Subscribed_Premium), stat ="bin", alpha=0.6) +
+  theme_classic()
+```
+
+```{r}
+# Viewed the distribution of the outcome of "Yes" and "No" for subscription status
+p <- ggplot(data, aes(x=as.factor(Subscribed_Premium), fill=Subscribed_Premium)) +
+  geom_bar() +
+  labs(title="Distribution of Subscription Status", x="Subscribed", y="Count", fill="Subscribed") +
+  theme_minimal()
+
+print(p)
+table(data$Subscribed_Premium)
+```
+The "No" category contains less than 10% of the data.
+
+```{r}
+# Created boxplots to compare the outcome of whether a user is subscribed to premium by each numerical predictor
+p8 <- ggplot(data, aes(x=Subscribed_Premium, y=Age, fill=Subscribed_Premium)) +
+  geom_boxplot() +
+  labs(title="Age vs. Sub. Status", x="Subscribed", y="Age") +
+  theme_minimal()
+
+p9 <- ggplot(data, aes(x=Subscribed_Premium, y=Income_Level, fill=Subscribed_Premium)) +
+  geom_boxplot() +
+  labs(title="Income Level vs. Sub. Status", x="Subscribed", y="Income Level") +
+  theme_minimal()
+
+p10 <- ggplot(data, aes(x=Subscribed_Premium, y=Avg_Cart_Size, fill=Subscribed_Premium)) +
+  geom_boxplot() +
+  labs(title="Avg Cart Size vs. Sub. Status", x="Subscribed", y="Avg Cart Size") +
+  theme_minimal()
+
+p11 <- ggplot(data, aes(x=Subscribed_Premium, y=Website_Visit_Frequency, fill=Subscribed_Premium)) +
+  geom_boxplot() +
+  labs(title="Website Visit Frequency vs Sub. Status", x="Subscribed", y="Website Visit Frequency") +
+  theme_minimal()
+
+p12 <- ggplot(data, aes(x=Subscribed_Premium, y=Marketing_Emails_Opened, fill=Subscribed_Premium)) +
+  geom_boxplot() +
+  labs(title="Marketing Emails Opened vs. Sub. Status", x="Subscribed", y="Marketing Emails Opened") +
+  theme_minimal()
+
+grid.arrange(p8, p9, p10, p11, p12)
+```
+
+```{r}
+# Created bar plots to the outcome of whether a user is subscribed to premium by each categorical predictor
+p13 <- ggplot(data, aes(x=Device_Type, fill=Subscribed_Premium)) +
+  geom_bar(position="dodge") +
+  labs(title="Device Type vs. Subscription Status", x="Device Type", y="Count", fill="Subscribed") +
+  theme_minimal()
+
+# Bar plot for Loyalty Program Member vs. Subscription Status
+p14 <- ggplot(data, aes(x=as.factor(Loyalty_Program_Member), fill=Subscribed_Premium)) +
+  geom_bar(position="dodge") +
+  labs(title="Loyalty Program Membership vs. Subscription Status", x="Loyalty Program Member", y="Count", fill="Subscribed") +
+  theme_minimal()
+
+grid.arrange(p13, p14)
+```
+
+## Linearity/Model Structure
+```{r}
+# Fit the logistic regression model
+logit_model <- glm(Subscribed_Premium ~ Age + Income_Level + Avg_Cart_Size + 
+                   Website_Visit_Frequency + Marketing_Emails_Opened + Device_Type + 
+                   Loyalty_Program_Member, family = binomial, data = data)
+
+# Gets the predicted log-odds
+data$logit <- predict(logit_model, type = "link")
+
+# Scatterplot for Age vs Logit
+ggplot(data, aes(x = Age, y = logit)) +
+  geom_point(aes(color = Subscribed_Premium)) +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Logit vs Age", x = "Age", y = "Logit of Subscription") +
+  theme_minimal()
+
+# Scatterplot for Income Level vs Logit
+ggplot(data, aes(x = Income_Level, y = logit)) +
+  geom_point(aes(color = Subscribed_Premium)) +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Logit vs Income Level", x = "Income Level", y = "Logit of Subscription") +
+  theme_minimal()
+
+# Scatterplot for Avg Cart Size vs Logit
+ggplot(data, aes(x = Avg_Cart_Size, y = logit)) +
+  geom_point(aes(color = Subscribed_Premium)) +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Logit vs Avg Cart Size", x = "Average Cart Size", y = "Logit of Subscription") +
+  theme_minimal()
+
+# Scatterplot for Website Visit Frequency vs Logit
+ggplot(data, aes(x = Website_Visit_Frequency, y = logit)) +
+  geom_point(aes(color = Subscribed_Premium)) +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Logit vs Website Visit Frequency", x = "Website Visit Frequency", y = "Logit of Subscription") +
+  theme_minimal()
+
+# Scatterplot for Marketing Emails Opened vs Logit
+ggplot(data, aes(x = Marketing_Emails_Opened, y = logit)) +
+  geom_point(aes(color = Subscribed_Premium)) +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Logit vs Marketing Emails Opened", x = "Marketing Emails Opened", y = "Logit of Subscription") +
+  theme_minimal()
+```
+
+```{r}
+# Scatterplot for Age vs Logit with color based on Subscribed_Premium and Device_Type
+ggplot(data, aes(x = Age, y = logit, color = interaction(Subscribed_Premium, Device_Type))) +
+  geom_point() +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Logit vs Age (Colored by Subscribed_Premium and Device_Type)", 
+       x = "Age", 
+       y = "Logit of Subscription") +
+  theme_minimal() +
+  scale_color_manual(values = c("lightblue", "blue", "lightgreen", "darkgreen", "orange"))  # Adjust colors as needed
+
+# Scatterplot for Income Level vs Logit with color based on Subscribed_Premium and Device_Type
+ggplot(data, aes(x = Income_Level, y = logit, color = interaction(Subscribed_Premium, Device_Type))) +
+  geom_point() +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Logit vs Income Level (Colored by Subscribed_Premium and Device_Type)",
+       x = "Income Level", 
+       y = "Logit of Subscription") +
+  theme_minimal() +
+  scale_color_manual(values = c("lightblue", "blue", "lightgreen", "darkgreen", "orange"))
+
+# Scatterplot for Avg Cart Size vs Logit with color based on Subscribed_Premium and Device_Type
+ggplot(data, aes(x = Avg_Cart_Size, y = logit, color = interaction(Subscribed_Premium, Device_Type))) +
+  geom_point() +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Logit vs Avg Cart Size (Colored by Subscribed_Premium and Device_Type)", 
+       x = "Average Cart Size", 
+       y = "Logit of Subscription") +
+  theme_minimal() +
+  scale_color_manual(values = c("lightblue", "blue", "lightgreen", "darkgreen", "orange"))
+
+# Scatterplot for Website Visit Frequency vs Logit with color based on Subscribed_Premium and Device_Type
+ggplot(data, aes(x = Website_Visit_Frequency, y = logit, color = interaction(Subscribed_Premium, Device_Type))) +
+  geom_point() +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Logit vs Website Visit Frequency (Colored by Subscribed_Premium and Device_Type)", 
+       x = "Website Visit Frequency", 
+       y = "Logit of Subscription") +
+  theme_minimal() +
+  scale_color_manual(values = c("lightblue", "blue", "lightgreen", "darkgreen", "orange"))
+
+# Scatterplot for Marketing Emails Opened vs Logit with color based on Subscribed_Premium and Device_Type
+ggplot(data, aes(x = Marketing_Emails_Opened, y = logit, color = interaction(Subscribed_Premium, Device_Type))) +
+  geom_point() +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Logit vs Marketing Emails Opened (Colored by Subscribed_Premium and Device_Type)", 
+       x = "Marketing Emails Opened", 
+       y = "Logit of Subscription") +
+  theme_minimal() +
+  scale_color_manual(values = c("lightblue", "blue", "lightgreen", "darkgreen", "orange"))
+```
+
+# Analysis
+## Inital Model
+```{r}
+# Binomial glm
+# Only income level and website visit frequency seem significant in this basic model, we might have to look at transformations, squares, interactions, etc. 
+binom_model <- glm(Subscribed_Premium ~ Age + Income_Level + Avg_Cart_Size + Website_Visit_Frequency + Marketing_Emails_Opened + Device_Type + Loyalty_Program_Member, family = binomial(), data = data)
+summary(binom_model)
+
+# Independence assumptions hold
+# No autocorrelation
+library(lmtest)
+dwtest(binom_model)
+
+# Checking multicollinearity
+# All returns low values so no multicollinearity
+vif(binom_model)
+```
+
+```{r}
+# Binomial GLM with interactions
+# Interactions:
+#   - Age and Income_Level
+#   - Website_Visit_Frequency and Marketing_Emails_Opened
+#   - Device_Type and Loyalty_Program_Member
+model_with_interactions <- glm(Subscribed_Premium ~ Age + Income_Level + Avg_Cart_Size + 
+              Website_Visit_Frequency + Marketing_Emails_Opened + 
+              Device_Type + Loyalty_Program_Member + 
+              Age:Income_Level + 
+              Website_Visit_Frequency:Marketing_Emails_Opened +
+              Device_Type:Loyalty_Program_Member, 
+            family = binomial(link = "logit"), 
+            data = data)
+
+summary(model_with_interactions)
+
+# Global F test
+# p-value > 0.05, fail to reject the null hypothesis and all coefficients are equal to zero
+wald.test(b = coef(model_with_interactions), 
+          Sigma = vcov(model_with_interactions), 
+          Terms = 2 : length(coef(model_with_interactions)))
+
+
+vif(model_with_interactions)
+```
+
+## Model Building - First Method
+```{r}
+# Defining variables for easier model fitting
+x1 <- data$Age
+x2 <- data$Income_Level
+x3 <- data$Avg_Cart_Size
+x4 <- data$Website_Visit_Frequency
+x5 <- data$Marketing_Emails_Opened
+x6 <- data$Device_Type
+x7 <- data$Loyalty_Program_Member
+x8 <- data$Subscribed_Premium
+```
+
+```{r}
+# Perfect separations with these models (not useful)
+
+model3 <- glm(Subscribed_Premium ~ (x1 + x2 + x3 + x4 + x5 + x6 + x7)^2 + I(x1^2) + I(x2^2) + I(x3^2) + I(x4^2) + I(x5^2), family = binomial(link = "logit"), data = data)
+summary(model3)
+
+
+model4 <- glm(Subscribed_Premium ~ x1 + x4 + x5 + Device_Type + Loyalty_Program_Member + 
+                   I(x4^2) + x3:x4 + x5:Loyalty_Program_Member,
+                   family = binomial(link = "logit"), data = data)
+summary(model4)
+
+```
+
+```{r}
+# Removed qualitative terms and qualitative-quantitative interactions
+model5 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x1:x4 + x1:x5 +
+                   x2:x3 + x2:x4 + x2:x5 +
+                   x3:x4 + x3:x5+
+                   x4:x5 + I(x3^2) + I(x4^2) , 
+                   family = binomial(link = "logit"), data = data)
+summary(model5)
+
+# Removing x2 and its interactions
+model6 <- glm(Subscribed_Premium ~ x1 + x3 + x4 + x5 + x1:x4 +
+                   x3:x4 + x3:x5+
+                   x4:x5 + I(x3^2) + I(x4^2) , 
+                   family = binomial(link = "logit"), data = data)
+summary(model6)
+
+AIC(model5, model6)
+BIC(model5, model6)
+# Model 5 has lower AIC but higher BIC
+```
+
+```{r}
+model7 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x1:x4 + x2:x3+ x2:x4 + x3:x4 + x3:x5+ x4:x5 + I(x3^2) + I(x4^2) , 
+                   family = binomial(link = "logit"), data = data)
+summary(model7)
+```
+
+```{r}
+# Removing x2:x3 
+model8 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x1:x4 + x2:x4 +
+                   x3:x4 + x3:x5+
+                   x4:x5 + I(x3^2) + I(x4^2) , 
+                   family = binomial(link = "logit"), data = data)
+summary(model8)
+
+AIC(model7, model8)
+BIC(model7, model8)
+
+AIC(model8, model5)
+BIC(model8, model5)
+
+AIC(model8, model6)
+BIC(model8, model6)
+
+# Model 8 seems to be better than model 5, 6
+# Model 7 might be better than model 8(?)
+# Going to prioritize AIC over BIC assuming we are going for accurate prediction
+```
+
+```{r}
+# Experimenting further based off model 8
+# Removing x4:x5 and squared terms causes other predictors to become insignificant
+
+# Removing x2:x4
+model9 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x1:x4  +
+                   x3:x4 + x3:x5 + I(x3^2) + I(x4^2) , 
+                   family = binomial(link = "logit"), data = data)
+summary(model9)
+
+# Model 9 might be better(?) idk
+# Model 9 has lower AIC and BIC but less significant predictors...
+AIC(model8, model9)
+BIC(model8, model9)
+```
+
+```{r}
+model10 <- glm(Subscribed_Premium ~ x1 + x3 + x4 + x5 + x1:x4 +
+                   x3:x4 + x3:x5+
+                   x4:x5 + I(x3^2) + I(x4^2), 
+                   family = binomial(link = "logit"), data = data)
+summary(model10)
+
+# Model 8 and 9 better than model 10
+AIC(model8, model10)
+BIC(model8, model10)
+AIC(model9, model10)
+BIC(model9, model10)
+```
+
+```{r}
+# Rebuilding off model 9
+# Removed squared terms
+model11 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x1:x4  +
+                   x3:x4 + x3:x5, 
+                   family = binomial(link = "logit"), data = data)
+summary(model11)
+
+AIC(model11, model9)
+BIC(model11, model9)
+AIC(model11, model8)
+BIC(model11, model8)
+# Model 9 and 8 is still better (assuming we are going for trying to make most accurate prediction for response)
+```
+
+```{r}
+# Building off model 7 
+# Removed x2 interaction terms
+model12 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x1:x4 + x3:x4 + x3:x5+ x4:x5 + I(x3^2) + I(x4^2) , 
+                   family = binomial(link = "logit"), data = data)
+summary(model12)
+
+# Has slightly smaller AIC than model 9 and higher BIC (due to more terms)
+# 8 significant predictors, might be the best model for predicting response
+# Removing any significant values causes AIC to go up
+AIC(model12, model9)
+BIC(model12, model9)
+```
+
+## Model Building - Second Method
+```{r}
+# Main Effects Model
+model <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x6 + x7, family = binomial(link = "logit"), data = data)
+summary(model)
+vif(model)
+```
+
+```{r}
+# Full Model with all interaction terms between numerical predictors
+full_model <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 +
+                x1:x2 + x1:x3 + x1:x4 + x1:x5 +
+                x2:x3 + x2:x4 + x2:x5+
+                x3:x4 + x3:x5+
+                x4:x5, 
+                family = binomial(link = "logit"), data = data)
+summary(full_model)
+
+wald.test(b = coef(full_model), Sigma = vcov(full_model), Terms = 2:length(coef(full_model)))
+```
+
+```{r}
+# Model with squarted numerical terms
+sq_model <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 +
+                I(x1^2) + I(x2^2) + I(x3^2) + I(x4^2) + I(x5^2), 
+                family = binomial(link = "logit"), data = data)
+summary(sq_model)
+```
+
+```{r}
+# Main Effects + Interaction + Squared Terms Model
+model1 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 +
+                x1:x2 + x1:x3 + x1:x4 + x1:x5 +
+                x2:x3 + x2:x4 + x2:x5+
+                x3:x4 + x3:x5+
+                x4:x5 +
+                I(x1^2) + I(x2^2) + I(x3^2) + I(x4^2) + I(x5^2), 
+                family = binomial(link = "logit"), data = data)
+summary(model1)
+```
+
+```{r}
+# Removed insignificant squared terms
+model2 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 +
+                x1:x2 + x1:x3 + x1:x4 + x1:x5 +
+                x2:x3 + x2:x4 + x2:x5 +
+                x3:x4 + x3:x5 +
+                x4:x5 +
+                I(x3^2) + I(x4^2), 
+                family = binomial(link = "logit"), data = data)
+summary(model2)
+```
+
+```{r}
+# Removed insignificant interaction terms
+model3 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 +
+                x1:x4 + x1:x5 +
+                x2:x3 + x2:x4 + x2:x5 +
+                x3:x4 + x3:x5 +
+                x4:x5 +
+                I(x3^2) + I(x4^2), 
+                family = binomial(link = "logit"), data = data)
+summary(model3)
+```
+
+```{r}
+# Continued to remove insignificant interaction terms
+model4 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 +
+                x1:x4 +
+                x2:x3 + x2:x4 + x2:x5 +
+                x3:x4 + x3:x5 +
+                x4:x5 +
+                I(x3^2) + I(x4^2), 
+                family = binomial(link = "logit"), data = data)
+summary(model4)
+```
+
+```{r}
+# Continued to remove insignificant interaction terms
+model5 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 +
+                x1:x4 +
+                x3:x4 + x3:x5 +
+                x4:x5 +
+                I(x3^2) + I(x4^2), 
+                family = binomial(link = "logit"), data = data)
+summary(model5)
+```
+
+```{r}
+# Removed insignificant predictor
+model6 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 + x7 +
+                x1:x4 +
+                x3:x4 + x3:x5 +
+                x4:x5 +
+                I(x3^2) + I(x4^2), 
+                family = binomial(link = "logit"), data = data)
+summary(model6)
+```
+
+```{r}
+# Removed insignificant predictor
+model7 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 +
+                x1:x4 +
+                x3:x4 + x3:x5 +
+                x4:x5 +
+                I(x3^2) + I(x4^2), 
+                family = binomial(link = "logit"), data = data)
+summary(model7)
+wald.test(b = coef(model7),
+Sigma = vcov(model7),
+Terms = 2:length(coef(model7)))
+```
+
+```{r}
+# Removed remaining squared terms to compare
+model8 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 +
+                x1:x4 +
+                x3:x4 + x3:x5 +
+                x4:x5, 
+                family = binomial(link = "logit"), data = data)
+summary(model8)
+```
+
+```{r}
+# Removed one squared term at a time to view impact
+model9 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 +
+                x1:x4 +
+                x3:x4 + x3:x5 +
+                x4:x5 +
+                I(x3^2), 
+                family = binomial(link = "logit"), data = data)
+summary(model9)
+```
+
+```{r}
+# Removed one squared term at a time to view impact
+model10 <- glm(Subscribed_Premium ~ x1 + x2 + x3 + x4 + x5 +
+                x1:x4 +
+                x3:x4 + x3:x5 +
+                x4:x5 +
+                I(x4^2), 
+                family = binomial(link = "logit"), data = data)
+summary(model10)
+```
+This method used only comparing the p-values and AIC values of each of the models.
+
+# Results
+```{r}
+# Multicollinearity check for final model, done by centering variables with their mean since there is higher order terms and interactions
+
+library(dplyr)
+# Centering the variables
+data_centered <- data %>%
+  mutate(cx1 = scale(x1, center = TRUE, scale = FALSE),
+         cx2 = scale(x2, center = TRUE, scale = FALSE),
+         cx3 = scale(x3, center = TRUE, scale = FALSE),
+         cx4 = scale(x4, center = TRUE, scale = FALSE),
+         cx5 = scale(x5, center = TRUE, scale = FALSE))
+
+# Re-run model with centered terms and interactions
+vif_model_centered <- lm(Subscribed_Premium ~ cx1 + cx2 + cx3 + cx4 + cx5 + 
+    cx1:cx4 + cx3:cx4 + cx3:cx5 + cx4:cx5 + I(cx4^2) , data = data_centered)
+vif(vif_model_centered)
+
+# All vif centered values return a number lower than 10
+```
+
+```{r}
+# Generates the predicted probabilities
+data$predicted <- predict(model10, type = "response")
+
+# Converts the probabilities to binary classifications with a threshold of 0.5
+data$predicted_class <- ifelse(data$predicted > 0.5, 1, 0)
+
+# Creates confusion matrix
+conf_matrix <- table(Predicted = data$predicted_class, Actual = data$Subscribed_Premium)
+
+# Computes the Accuracy, Sensitivity, Specificity
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+sensitivity <- conf_matrix[2,2] / sum(conf_matrix[,2]) # True Positive Rate
+specificity <- conf_matrix[1,1] / sum(conf_matrix[,1]) # True Negative Rate
+
+print(conf_matrix)
+cat("Accuracy:", round(accuracy, 3), "\n")
+cat("Sensitivity (Recall):", round(sensitivity, 3), "\n")
+cat("Specificity:", round(specificity, 3), "\n")
+```
+
+```{r}
+library(pROC)
+
+# Plots the ROC curve
+roc_curve <- roc(data$Subscribed_Premium, data$predicted)
+plot(roc_curve, col="blue", main="ROC Curve")
+
+# Compute AUC value
+auc_value <- auc(roc_curve)
+cat("AUC:", round(auc_value, 3))
+```
+
+```{r}
+library(caret)
+
+# Finds the absolute values of coefficients
+var_imp <- abs(coef(model10)[-1])  # Remove intercept
+var_imp_df <- data.frame(Variable = names(var_imp), Importance = var_imp)
+
+# Plots the variable importance
+ggplot(var_imp_df, aes(x = reorder(Variable, Importance), y = Importance)) +
+  geom_bar(stat="identity", fill="blue") +
+  coord_flip() +
+  labs(title = "Variable Importance", x = "Predictor", y = "Absolute Coefficient") +
+  theme_minimal()
+```
+
+
+
+
+
